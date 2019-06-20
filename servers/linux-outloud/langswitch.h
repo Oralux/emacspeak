@@ -2,6 +2,7 @@
 #define LANGSWITCH_H
 
 #include <tcl.h>
+#include <stdint.h>
 
 /* The declarations in langswitch (.h, .cpp) are derived from the publically
    available eci.h (APIs for IBM Text To Speech) at http://ibmtts-sdk.sf.net
@@ -59,33 +60,43 @@ enum ECILanguageDialect {
   eciStandardJapanese = 0x00080000,
   eciStandardJapaneseSJIS = eciStandardJapanese,
   eciStandardJapaneseUCS = 0x00080800,
-  eciStandardFinnish = 0x00090000,
-  eciStandardKorean = 0x000A0000,
-  eciStandardKoreanUHC = eciStandardKorean,
-  eciStandardKoreanUCS = 0x000A0800,
-  eciStandardCantonese = 0x000B0000,
-  eciStandardCantoneseGB = eciStandardCantonese,
-  eciStandardCantoneseUCS = 0x000B0800,
-  eciHongKongCantonese = 0x000B0001,
-  eciHongKongCantoneseBig5 = eciHongKongCantonese,
-  eciHongKongCantoneseUCS = 0x000B0801,
-  eciStandardDutch = 0x000C0000,
-  eciStandardNorwegian = 0x000D0000,
-  eciStandardSwedish = 0x000E0000,
-  eciStandardDanish = 0x000F0000,
-  eciStandardReserved = 0x00100000,
-  eciStandardThai = 0x00110000,
-  eciStandardThaiTIS = eciStandardThai
-
+  eciStandardFinnish = 0x00090000
 };
 
-//
-enum { ANNOTATION_MAX_SIZE = 10, LANG_INFO_MAX = 22 };
-int SetLanguage(ClientData, Tcl_Interp*, int, Tcl_Obj* CONST[]);
-enum ECILanguageDialect initLanguage(Tcl_Interp* interp,
-                                     enum ECILanguageDialect* aLanguages,
-                                     int nLanguages);
-const char* getAnnotation(Tcl_Interp* interp, int* theIndex);
+// From libvoxin 1.4.0
+typedef enum {voxFemale, voxMale} voxGender;
+typedef enum {voxAdult, voxChild, voxSenior} voxAge;
+
+#define VOX_ECI_VOICES 22
+#define VOX_RESERVED_VOICES 30
+#define VOX_MAX_NB_OF_LANGUAGES (VOX_ECI_VOICES + VOX_RESERVED_VOICES)
+#define VOX_STR_MAX 128
+
+typedef struct {
+  uint32_t id; // voice identifier
+  char name[VOX_STR_MAX]; // optional: 'Yelda',...
+  char lang[VOX_STR_MAX]; // ietf sub tag, iso639-1, 2 letters code: 'en', 'tr',...
+  char variant[VOX_STR_MAX]; // ietf sub tag, optional: 'scotland', 'CA',...
+  uint32_t rate; // sample rate in Hertz: 11025, 22050
+  uint32_t  size; // sample size e.g. 16 bits
+  /* chanels = 1 */
+  /* encoding = signed-integer PCM */
+  char charset[VOX_STR_MAX]; // "UTF-8", "ISO-8859-1",...
+  voxGender gender;
+  voxAge age;
+  char multilang[VOX_STR_MAX]; // optional, e.g. "en,fr"
+  char quality[VOX_STR_MAX]; // optional, e.g. "embedded-compact"
+} vox_t;
+// <--
+
+#define ANNOTATION_MAX_SIZE 16
+
+uint32_t initLanguage(Tcl_Interp *interp,
+		      enum ECILanguageDialect *aLanguages,
+		      unsigned int nLanguages,
+		      vox_t *voices,
+		      unsigned int number_of_voices);
+const char* getAnnotation(Tcl_Interp* interp);
 char* convertFromUTF8(Tcl_Interp* interp, const char* theString);
 
 #endif

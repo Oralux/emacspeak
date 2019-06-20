@@ -142,6 +142,13 @@ static int (*_eciSetOutputBuffer)(void *, int, short *);
 static int (*_eciSetOutputDevice)(void *, int);
 static void (*_eciRegisterCallback)(void *, int (*)(void *, int, long, void *),
                                     void *);
+
+static int (*_voxGetVoices)(vox_t *, unsigned int *);
+
+//
+static vox_t voices[VOX_RESERVED_VOICES];
+static unsigned int number_of_voices = VOX_RESERVED_VOICES;
+//
 static size_t alsa_init();
 static void alsa_reset();  // drop handle and reset
 static size_t alsa_configure(void);
@@ -454,6 +461,8 @@ int Atcleci_Init(Tcl_Interp *interp) {
   _eciSetOutputDevice =
       (int (*)(void *, int))(unsigned long)dlsym(eciLib, "eciSetOutputDevice");
 
+  _voxGetVoices = (int (*)(vox_t *, unsigned int *))(unsigned long)dlsym(eciLib, "voxGetVoices");
+  
   //>
   //< check for needed symbols
 
@@ -542,18 +551,24 @@ int Atcleci_Init(Tcl_Interp *interp) {
     return TCL_ERROR;
   }
 
-  static enum ECILanguageDialect aLanguages[LANG_INFO_MAX];
-  int nLanguages = LANG_INFO_MAX;
+  static enum ECILanguageDialect aLanguages[VOX_MAX_NB_OF_LANGUAGES];
+  int nLanguages = VOX_MAX_NB_OF_LANGUAGES;
   _eciGetAvailableLanguages(aLanguages, &nLanguages);
 
-  enum ECILanguageDialect aDefaultLanguage =
-      initLanguage(interp, aLanguages, nLanguages);
+  number_of_voices = 0;
+  if (_voxGetVoices) {
+    number_of_voices = VOX_RESERVED_VOICES;
+    _voxGetVoices(voices, &number_of_voices);
+  }
+
+  uint32_t aDefaultLanguage =
+      initLanguage(interp, aLanguages, nLanguages, voices, number_of_voices);
   if (aDefaultLanguage == NODEFINEDCODESET) {
     Tcl_AppendResult(interp, "No language found", PACKAGENAME, NULL);
     return TCL_ERROR;
   }
   fprintf(stderr, "Found %d languages.\n", nLanguages);
-  eciHandle = _eciNewEx(aDefaultLanguage);
+  eciHandle = _eciNewEx((enum ECILanguageDialect)aDefaultLanguage);
   if (eciHandle == 0) {
     Tcl_AppendResult(interp, "Could not open text-to-speech engine", NULL);
     return TCL_ERROR;
@@ -732,16 +747,18 @@ int Say(ClientData eciHandle, Tcl_Interp *interp, int objc,
         return TCL_ERROR;
       }
     } else {
-      char *dest = convertFromUTF8(interp, Tcl_GetStringFromObj(objv[i], NULL));
-      if (dest) {
-        rc = _eciAddText(eciHandle, dest);
-        free(dest);
-        if (!rc) {
-          Tcl_SetResult(interp, const_cast<char *>("Internal tts error"),
-                        TCL_STATIC);
-          return TCL_ERROR;
-        }
-      }
+		char *src = Tcl_GetStringFromObj(objv[i], NULL);
+		if (src) {
+			char *dest = convertFromUTF8(interp, src);
+			src = dest ? dest : src;			
+			rc = _eciAddText(eciHandle, src);
+			free(dest);
+			if (!rc) {
+				Tcl_SetResult(interp, const_cast<char *>("Internal tts error"),
+							  TCL_STATIC);
+				return TCL_ERROR;
+			}
+		}
     }
   }
   if (Tcl_StringMatch(Tcl_GetStringFromObj(objv[0], NULL), "synth")) {
@@ -849,8 +866,7 @@ int showAlsaState(ClientData eciHandle, Tcl_Interp *interp, int objc,
 
 int SetLanguage(ClientData eciHandle, Tcl_Interp *interp, int objc,
                 Tcl_Obj *CONST objv[]) {
-  int aIndex;
-  const char *code = getAnnotation(interp, &aIndex);
+  const char *code = getAnnotation(interp);
   if (code) {
     char buffer[ANNOTATION_MAX_SIZE];
     snprintf(buffer, ANNOTATION_MAX_SIZE, "`l%s", code);
