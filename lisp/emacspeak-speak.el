@@ -93,6 +93,20 @@
                      'personality personality string))
 
 ;;}}}
+;;{{{Read JSON file:
+
+(defsubst ems--json-read-file (filename)
+  "Use native json implementation if available to read json file."
+  (cond
+   ((fboundp 'json-parse-buffer)
+    (with-current-buffer (find-file-noselect filename)
+      (goto-char (point-min))
+      (prog1
+          (json-parse-buffer :object-type 'alist)
+        (kill-buffer ))))
+   (t (json-read-file filename))))
+
+;;}}}
 ;;{{{ Per-Mode Punctuations:
 
 (defvar emacspeak-speak-mode-punctuation-table
@@ -521,7 +535,6 @@ Value returned is compatible with `encode-time'."
 
 ;;}}}
 ;;{{{  url link pattern:
-
 
 (defcustom emacspeak-speak-embedded-url-pattern
   "<https?:[^ \t]*>"
@@ -1927,7 +1940,6 @@ The result is put in the kill ring for convenience."
 
 ;;}}}
 ;;{{{ Speak header-line
-
 
 (defcustom emacspeak-use-header-line t
   "Use default header line defined  by Emacspeak for buffers that
@@ -3386,62 +3398,25 @@ See documentation for command run-at-time for details on time-spec."
 ;;}}}
 ;;{{{ Directory specific settings
 
-(defcustom emacspeak-speak-load-directory-settings-quietly t
-  "User option that affects loading of directory specific settings.
-If set to T,Emacspeak will not prompt before loading
-directory specific settings."
-  :group 'emacspeak-speak
-  :type 'boolean)
-
 (defcustom emacspeak-speak-directory-settings
   ".espeak.el"
   "Name of file that holds directory specific settings."
   :group 'emacspeak-speak
   :type 'string)
-
-(defun emacspeak-speak-root-dir-p (dir)
-  "Check if we are at the root of the filesystem."
-  (let ((parent (expand-file-name "../" dir)))
-    (or (or (not (file-readable-p dir))
-            (not (file-readable-p parent)))
-        (and
-         (string-equal (file-truename dir) "/")
-         (string-equal (file-truename parent) "/")))))
-
-(defun emacspeak-speak-get-directory-settings (dir)
-  "Finds the next directory settings  file upwards in the directory tree
-from DIR. Returns nil if it cannot find a settings file in DIR
-or an ascendant directory."
-  (cl-declare (special emacspeak-speak-directory-settings
-                       default-directory))
-  (let ((file (cl-find emacspeak-speak-directory-settings
-                       (directory-files dir)
-                       :test 'string-equal)))
-    (cond
-     (file (expand-file-name file dir))
-     ((not (emacspeak-speak-root-dir-p dir))
-      (emacspeak-speak-get-directory-settings (expand-file-name ".." dir)))
-     (t nil))))
-
 ;;;###autoload
-(defun emacspeak-speak-load-directory-settings (&optional directory)
+(defun emacspeak-speak-load-directory-settings (&optional dir)
   "Load a directory specific Emacspeak settings file.
 This is typically used to load up settings that are specific to
 an electronic book consisting of many files in the same
 directory."
-  (interactive "DDirectory:")
-  (or directory
-      (setq directory default-directory))
-  (let ((settings (emacspeak-speak-get-directory-settings directory)))
-    (when (and settings
-               (file-exists-p settings)
-               (or emacspeak-speak-load-directory-settings-quietly
-                   (y-or-n-p "Load directory settings? ")
-                   "Load  directory specific Emacspeak
-settings? "))
-      (condition-case nil
-          (load-file settings)
-        (error (message "Error loading settings %s" settings))))))
+  (cl-declare (special emacspeak-speak-directory-settings default-directory))
+  (unless dir (setq dir default-directory))
+  (let ((res (locate-dominating-file dir emacspeak-speak-directory-settings)))
+    (when
+        (and res
+             (file-exists-p (expand-file-name emacspeak-speak-directory-settings res)))
+      (load (expand-file-name emacspeak-speak-directory-settings res))
+      (emacspeak-auditory-icon 'task-done))))
 
 ;;}}}
 ;;{{{ silence:
@@ -3692,7 +3667,6 @@ Arranges for `VAR' to be restored when `file' is loaded."
 
 ;;; local variables:
 ;;; folded-file: t
-;;; byte-compile-dynamic: t
 ;;; end:
 
 ;;}}}

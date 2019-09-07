@@ -86,7 +86,8 @@
     (?— . " --- ")                      ; m-dash
     (?  . " ")                          ; hair space
     (?﻿ . " ")                           ; zero-width  no-break space
-    (?​ . " ") ; zero-width space
+    (?‌ . "") ; zero width non-joiner
+    (?​ . " ")                           ; zero-width space
     (?  . " ")                          ; thin space
     (?― . "----")                       ; horizontal bar
     (?‖ . "||")                         ; vertical bar
@@ -105,8 +106,6 @@
   :type '(alist
           :key-type (character :tag "character")
           :value-type (string :tag "replacement")))
-
-
 
 (defcustom dtk-unicode-process-utf8 t
   "Turn this off when working with TTS  engines that handle UTF8
@@ -336,7 +335,6 @@ Does nothing for unibyte buffers."
 ;;; local variables:
 ;;; coding: utf-8
 ;;; folded-file: t
-;;; byte-compile-dynamic: t
 ;;; end:
 
 ;;}}}

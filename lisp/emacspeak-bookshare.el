@@ -1112,7 +1112,6 @@ Target location is generated from author and title."
                 'auditory-icon 'item))
     (message "Unpacked content.")))
 
-
 (defcustom emacspeak-bookshare-xslt
   "daisyTransform.xsl"
   "Name of bookshare  XSL transform."
@@ -1352,7 +1351,6 @@ Useful for fulltext search in a book."
     (error "Your Emacs doesn't have EWW."))
   (let ((gc-cons-threshold (max 8000000 gc-cons-threshold))
         (xsl (emacspeak-bookshare-xslt directory))
-          (locals (locate-dominating-file directory emacspeak-speak-directory-settings))
         (buffer (get-buffer-create "Full Text"))
         (command nil)
         (inhibit-read-only t))
@@ -1366,13 +1364,11 @@ Useful for fulltext search in a book."
       (erase-buffer)
       (setq buffer-undo-list t)
       (shell-command command (current-buffer) nil)
-      (when locals 
-      (setq locals (expand-file-name  emacspeak-speak-directory-settings locals)))
       (add-hook
        'emacspeak-web-post-process-hook
        #'(lambda nil
            (setq emacspeak-bookshare-this-book directory)
-           (when (and locals (file-exists-p locals))(load locals))
+           (emacspeak-speak-load-directory-settings directory)
            (emacspeak-auditory-icon 'open-object)
            (emacspeak-speak-mode-line)))
       (browse-url-of-buffer)
@@ -1412,7 +1408,6 @@ Useful for fulltext search in a book."
 
 ;;; local variables:
 ;;; folded-file: t
-;;; byte-compile-dynamic: t
 ;;; end:
 
 ;;}}}

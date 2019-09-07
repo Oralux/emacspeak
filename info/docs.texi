@@ -4,7 +4,7 @@
 
 @include intro-docs.texi
 
-This chapter documents a total of 1225 commands and 908 options.
+This chapter documents a total of 1227 commands and 903 options.
 
 @menu
 * acss-structure::CSS -- Cascaded Speech Style structure.
@@ -49,6 +49,8 @@ This chapter documents a total of 1225 commands and 908 options.
 * emacspeak-cperl::Speech enable CPerl Mode.
 * emacspeak-custom::Speech enable interactive Emacs customization.
 * emacspeak-dbus::DBus On Emacspeak Desktop.
+* emacspeak-deadgrep::Speech-enable DEADGREP.
+* emacspeak-debugger::Speech-enable DEBUGGER.
 * emacspeak-desktop::Speech-enable desktop.
 * emacspeak-dictionary::speech-enable dictionaries.
 * emacspeak-diff-mode::Speech-enable DIFF-MODE.
@@ -67,7 +69,7 @@ This chapter documents a total of 1225 commands and 908 options.
 * emacspeak-entertain::Speech enable misc games.
 * emacspeak-epa::Speech-enable EasyPG Assistant.
 * emacspeak-eperiodic::Speech-enable Periodic Table.
-* emacspeak-epub::epubs Front-end for emacspeak desktop.
+* emacspeak-epub::On epubs emacspeak desktop.
 * emacspeak-erc::speech-enable erc irc client.
 * emacspeak-eshell::Speech-enable EShell - Emacs Shell.
 * emacspeak-ess::Speech-enable ESS: Emacs Speaks Statistics.
@@ -137,6 +139,7 @@ This chapter documents a total of 1225 commands and 908 options.
 * emacspeak-navi-mode::Speech-enable NAVI-MODE.
 * emacspeak-net-utils::Speech enable net-utils.
 * emacspeak-newsticker::Speech-enable newsticker.
+* emacspeak-nov::Speech-enable NOV.
 * emacspeak-npr::Speech-enabled  NPR client.
 * emacspeak-nxml::Speech enable nxml mode.
 * emacspeak-ocr::ocr Front-end for emacspeak desktop.
@@ -1244,12 +1247,12 @@ C-y		emacspeak-clipboard-paste
 ESC		Prefix Command
 SPC		emacspeak-speak-header-line
 !		emacspeak-speak-run-shell-command
-"		emacspeak-pianobar
+"		emacspeak-speak-sexp
 #		emacspeak-gridtext
 $		emacspeak-shell-command
 %		emacspeak-speak-current-percentage
 &		emacspeak-wizards-shell-command-on-current-file
-'		emacspeak-speak-sexp
+'		emacspeak-pianobar
 (		emacspeak-audio-setup
 )		emacspeak-sounds-select-theme
 ,		emacspeak-speak-skim-buffer
@@ -1307,9 +1310,8 @@ x		emacspeak-personal-keymap
 |		emacspeak-speak-line-set-column-filter
 DEL		cd-tool
 C-SPC		emacspeak-speak-current-mark
-<(deletechar>	emacspeak-ssh-tts-restart
-<C-<left>	emacspeak-select-this-buffer-previous-display
-<C-<right>	emacspeak-select-this-buffer-next-display
+<C-left>	emacspeak-select-this-buffer-previous-display
+<C-right>	emacspeak-select-this-buffer-next-display
 <fn>	dtk-stop
 <delete>	emacspeak-ssh-tts-restart
 <down>		emacspeak-read-next-line
@@ -1319,6 +1321,7 @@ C-SPC		emacspeak-speak-current-mark
 <left>		emacspeak-speak-this-buffer-previous-display
 <right>		emacspeak-speak-this-buffer-next-display
 <up>		emacspeak-read-previous-line
+<(deletechar>	emacspeak-ssh-tts-restart
 
 x SPC		emacspeak-jabber-speak-recent-message
 x ,		emacspeak-wizards-shell-directory-set
@@ -1326,15 +1329,17 @@ x .		emacspeak-wizards-shell-directory-reset
 x 0 .. x 9	emacspeak-wizards-shell-by-key
 x =		emacspeak-wizards-find-longest-line-in-region
 x C		emacspeak-wizards-colors
+x a		emacspeak-wizards-alpha-vantage-quotes
 x b		battery
 x c		emacspeak-wizards-color-wheel
+x d		deadgrep
 x e		emacspeak-we-xsl-map
 x h		emacspeak-wizards-how-many-matches
 x i		ibuffer
 x j		emacspeak-jabber-popup-roster
 x m		mspools-show
 x o		emacspeak-wizards-occur-header-lines
-x p		paradox-list-packages
+x p		package-list-packages
 x q		emacspeak-wizards-quote
 x r		jabber-activity-switch-to
 x s		emacspeak-emergency-tts-restart
@@ -1530,7 +1535,6 @@ r		org-capture
 s		emacspeak-wizards-shell
 t		twit
 u		list-unicode-display
-v		vdiff-magit-popup
 w		emacspeak-wizards-noaa-weather
 y		yas-expand
 
@@ -4185,21 +4189,12 @@ Return matching AMark if found in buffer-local AMark list.
 @end format
 @end deffn
 
-@subsubsection emacspeak-amark-load
-@deffn {Command} emacspeak-amark-load   
-@findex emacspeak-amark-load
-
-@format
-Locate AMarks file from current directory, and load it.
-@end format
-@end deffn
-
 @subsubsection emacspeak-amark-save
 @deffn {Command} emacspeak-amark-save   
 @findex emacspeak-amark-save
 
 @format
-Save buffer-local AMarks in current directory.
+Save buffer-local AMarks in  directory of currently playing resource.
 @end format
 @end deffn
 
@@ -5494,6 +5489,17 @@ key             binding
 @end format
 @end deffn
 
+@node emacspeak-deadgrep
+@section emacspeak-deadgrep
+
+DEADGREP ==  Front-end to ripgrep.
+
+@node emacspeak-debugger
+@section emacspeak-debugger
+
+DEBUGGER ==  Emacs Interactive Debugger.
+Speech-enable the debugger by speech-enabling interactive commands.
+
 @node emacspeak-desktop
 @section emacspeak-desktop
 
@@ -6119,35 +6125,37 @@ on the various commands and user options.
 
 In the simplest case, EBooks can be placed under a specific
 directory (with sub-directories as needed).
-Customize   user option @code{emacspeak-epub-library-directory}     to point to this location.
-Here is  a quick summary of commands for organizing, saving and opening  a bookshelf:
+Customize   user option @code{emacspeak-epub-library-directory}
+to point to this location.
+Here is  a quick summary of commands for
+organizing, saving and opening  a bookshelf:
 
 @table @kbd
-@item a               
+@item a
 emacspeak-epub-bookshelf-add-epub
-@item b               
+@item b
 emacspeak-epub-bookshelf-open
-@item c               
+@item c
 emacspeak-epub-bookshelf-clear
-@item d               
+@item d
 emacspeak-epub-bookshelf-remove-this-book
-@item r               
+@item r
 emacspeak-epub-bookshelf-rename
 @item l
 emacspeak-epub-locate-epubs
-@item C-a             
+@item C-a
 emacspeak-epub-bookshelf-add-directory
-@item C-d             
+@item C-d
 emacspeak-epub-bookshelf-remove-directory
-@item C-l             
+@item C-l
 emacspeak-epub-bookshelf-redraw
-@item C-o             
+@item C-o
 emacspeak-epub-bookshelf-open-epub
-@item M-s             
+@item M-s
 emacspeak-epub-bookshelf-save
-@item C-x C-q         
+@item C-x C-q
 emacspeak-epub-bookshelf-refresh
-@item C-x C-s         
+@item C-x C-s
 emacspeak-epub-bookshelf-save
 @end table
 
@@ -6163,16 +6171,20 @@ emacspeak-epub-gutenberg-catalog
 @item g
 emacspeak-epub-gutenberg-download
 @end table
-Once downloaded, these EBooks can be organized under  @code{emacspeak-epub-library-directory};
-For  more advanced usage, see the next section on integrating with Calibre catalogs.
+Once downloaded, these EBooks can be
+organized under  @code{emacspeak-epub-library-directory}
+For  more advanced usage, see the next section
+on integrating with Calibre catalogs.
 
 @subsection Calibre Integration
 
-Project Calibre  enables the indexing and searching of large EBook collections.
+Project Calibre  enables the indexing and searching of
+large EBook collections.
 Read the Calibre documentation for organizing and indexing your EBook library.
 See user options named @code{emacspeak-epub-calibre-*} for
 customizing  emacspeak to work with Calibre.
-Once set up, Calibre integration provides the following commands from the @emph{bookshelf} buffer:
+Once set up, Calibre integration provides
+the following commands from the @emph{bookshelf} buffer:
 
 @table @kbd
 @item /
@@ -6198,16 +6210,14 @@ well-constructed epub, this TOC should provide hyperlinks to each
 section listed in the table of contents.
 
 @table @kbd
-@item RET             
+@item RET
 emacspeak-epub-eww
-@item e               
+@item e
 emacspeak-epub-eww
-@item f               
+@item f
 emacspeak-epub-browse-files
-@item o               
+@item o
 emacspeak-epub-open
-@item t               
-emacspeak-epub-fulltext
 @end table
 
 @subsection emacspeak-epub Commands
@@ -6449,25 +6459,16 @@ Delete EPub under point.
 @end deffn
 
 @subsubsection emacspeak-epub-eww
-@deffn {Command} emacspeak-epub-eww  (epub-file)
+@deffn {Command} emacspeak-epub-eww  (epub-file &optional broken-ncx)
 @findex emacspeak-epub-eww
 
 @format
 Display entire book  using EWW from EPub.
+Uses content listed in toc.ncx or  equivalent by default.
+Interactive prefix arg broken-ncx asks to use the list of html files
+in the epub file instead.
 
-(fn EPUB-FILE)
-@end format
-@end deffn
-
-@subsubsection emacspeak-epub-fulltext
-@deffn {Command} emacspeak-epub-fulltext  (epub-file)
-@findex emacspeak-epub-fulltext
-
-@format
-Display fulltext from EPub in a buffer.
-Suitable for text searches.
-
-(fn EPUB-FILE)
+(fn EPUB-FILE &optional BROKEN-NCX)
 @end format
 @end deffn
 
@@ -6541,6 +6542,7 @@ ESC		Prefix Command
 A		emacspeak-epub-bookshelf-calibre-author
 C		emacspeak-epub-gutenberg-catalog
 G		emacspeak-epub-google
+O		emacspeak-epub-open-with-nov
 S		emacspeak-epub-bookshelf-calibre-search
 T		emacspeak-epub-bookshelf-calibre-title
 a		emacspeak-epub-bookshelf-add-epub
@@ -6555,7 +6557,6 @@ n		next-line
 o		emacspeak-epub-open
 p		previous-line
 r		emacspeak-epub-bookshelf-rename
-t		emacspeak-epub-fulltext
 
 M-s		emacspeak-epub-bookshelf-save
 
@@ -6586,6 +6587,15 @@ Open specified Epub.
 Filename may need to  be shell-quoted when called from Lisp.
 
 (fn EPUB-FILE)
+@end format
+@end deffn
+
+@subsubsection emacspeak-epub-open-with-nov
+@deffn {Command} emacspeak-epub-open-with-nov   
+@findex emacspeak-epub-open-with-nov
+
+@format
+Open ebook at point in nov-mode.
 @end format
 @end deffn
 
@@ -8361,6 +8371,39 @@ Uses most recently navigated structural unit.
 Otherwise, prompts if content at point is enclosed by multiple elements.
 
 (fn ELEMENT)
+@end format
+@end deffn
+
+@subsubsection emacspeak-eww-table-next-cell
+@deffn {Command} emacspeak-eww-table-next-cell  (&optional prefix)
+@findex emacspeak-eww-table-next-cell
+
+@format
+Speak next cell after making it current.
+Interactive prefix arg moves to the last cell in the table.
+
+(fn &optional PREFIX)
+@end format
+@end deffn
+
+@subsubsection emacspeak-eww-table-previous-cell
+@deffn {Command} emacspeak-eww-table-previous-cell  (&optional prefix)
+@findex emacspeak-eww-table-previous-cell
+
+@format
+Speak previous cell after making it current.
+With interactive prefix arg, move to the start of the table.
+
+(fn &optional PREFIX)
+@end format
+@end deffn
+
+@subsubsection emacspeak-eww-table-speak-cell
+@deffn {Command} emacspeak-eww-table-speak-cell   
+@findex emacspeak-eww-table-speak-cell
+
+@format
+Speak current cell.
 @end format
 @end deffn
 
@@ -10624,6 +10667,15 @@ Jump to specified AMark.
 @end format
 @end deffn
 
+@subsubsection emacspeak-m-player-amark-save
+@deffn {Command} emacspeak-m-player-amark-save   
+@findex emacspeak-m-player-amark-save
+
+@format
+Ensure that amarks are saved in the directory of the resource .
+@end format
+@end deffn
+
 @subsubsection emacspeak-m-player-apply-reverb-preset
 @deffn {Command} emacspeak-m-player-apply-reverb-preset  (preset)
 @findex emacspeak-m-player-apply-reverb-preset
@@ -11011,7 +11063,7 @@ O		emacspeak-m-player-reset-options
 P		emacspeak-m-player-apply-reverb-preset
 Q		emacspeak-m-player-quit
 R		emacspeak-m-player-edit-reverb
-S		emacspeak-amark-save
+S		emacspeak-m-player-amark-save
 [		emacspeak-m-player-slower
 \		emacspeak-m-player-persist-process
 ]		emacspeak-m-player-faster
@@ -11487,7 +11539,7 @@ O		emacspeak-m-player-reset-options
 P		emacspeak-m-player-apply-reverb-preset
 Q		emacspeak-m-player-quit
 R		emacspeak-m-player-edit-reverb
-S		emacspeak-amark-save
+S		emacspeak-m-player-amark-save
 [		emacspeak-m-player-slower
 \		emacspeak-m-player-persist-process
 ]		emacspeak-m-player-faster
@@ -11543,11 +11595,6 @@ Options passed to mplayer.
 
 @defvar {User Option} emacspeak-m-player-program
 Media player program.
-
-@end defvar
-
-@defvar {User Option} emacspeak-m-player-recent-amark-name
-Name used to  mark position where we quit a stream.
 
 @end defvar
 
@@ -11848,36 +11895,6 @@ This personality uses  voice-monotone whose  effect can be changed globally by c
 @defvar {User Option} voice-magit-log-graph
 Personality used for magit-log-graph
 This personality uses  voice-monotone whose  effect can be changed globally by customizing voice-monotone-settings.
-
-@end defvar
-
-@defvar {User Option} voice-magit-popup-argument
-Personality used for magit-popup-argument
-This personality uses  voice-bolden whose  effect can be changed globally by customizing voice-bolden-settings.
-
-@end defvar
-
-@defvar {User Option} voice-magit-popup-disabled-argument
-Personality used for magit-popup-disabled-argument
-This personality uses  voice-monotone whose  effect can be changed globally by customizing voice-monotone-settings.
-
-@end defvar
-
-@defvar {User Option} voice-magit-popup-heading
-Personality used for magit-popup-heading
-This personality uses  voice-bolden whose  effect can be changed globally by customizing voice-bolden-settings.
-
-@end defvar
-
-@defvar {User Option} voice-magit-popup-key
-Personality used for magit-popup-key
-This personality uses  voice-lighten whose  effect can be changed globally by customizing voice-lighten-settings.
-
-@end defvar
-
-@defvar {User Option} voice-magit-popup-option-value
-Personality used for magit-popup-option-value
-This personality uses  voice-brighten whose  effect can be changed globally by customizing voice-brighten-settings.
 
 @end defvar
 
@@ -13193,6 +13210,19 @@ Newsticker provides a continuously updating newsticker using
 RSS
 Provides functionality similar to amphetadesk --but in pure elisp
 
+@node emacspeak-nov
+@section emacspeak-nov
+
+NOV == Yet Another EPub Reader 
+Package nov.el is an alternative to Emacspeak's built-in EPub
+reader.
+This module speech-enables nov.el
+In addition, opening an epub using nov results in
+directory-specific settings being loaded from file
+@var{emacspeak-speak-directory-settings} ---
+ That file can set book-specific settings such as speech-rate and
+punctuation-mode among others.
+
 @node emacspeak-npr
 @section emacspeak-npr
 
@@ -14029,6 +14059,11 @@ Key of template used for capturing  hot list.
 
 @end defvar
 
+@defvar {User Option} emacspeak-org-table-after-movement-function
+The function to call after moving in a table
+
+@end defvar
+
 @node emacspeak-origami
 @section emacspeak-origami
 
@@ -14254,10 +14289,10 @@ keys from @code{pianobar-key-map}.
 @subsubsection emacspeak-pianobar
 @deffn {Command} emacspeak-pianobar   
 @table @kbd
-@item C-e "
-@kindex C-e "
-@item <fn> "
-@kindex <fn> "
+@item C-e '
+@kindex C-e '
+@item <fn> '
+@kindex <fn> '
 @end table
 
 @findex emacspeak-pianobar
@@ -16220,20 +16255,6 @@ the sense of the filter.
 @end format
 @end deffn
 
-@subsubsection emacspeak-speak-load-directory-settings
-@deffn {Command} emacspeak-speak-load-directory-settings  (&optional directory)
-@findex emacspeak-speak-load-directory-settings
-
-@format
-Load a directory specific Emacspeak settings file.
-This is typically used to load up settings that are specific to
-an electronic book consisting of many files in the same
-directory.
-
-(fn &optional DIRECTORY)
-@end format
-@end deffn
-
 @subsubsection emacspeak-speak-message-again
 @deffn {Command} emacspeak-speak-message-again  (&optional from-message-cache)
 @table @kbd
@@ -16794,10 +16815,10 @@ Set punctuation mode for all buffers in current mode.
 @subsubsection emacspeak-speak-sexp
 @deffn {Command} emacspeak-speak-sexp  (&optional arg)
 @table @kbd
-@item C-e '
-@kindex C-e '
-@item <fn> '
-@kindex <fn> '
+@item C-e "
+@kindex C-e "
+@item <fn> "
+@kindex <fn> "
 @end table
 
 @findex emacspeak-speak-sexp
@@ -17467,13 +17488,6 @@ The list when set holds pairs of start-col.end-col pairs
 that specifies the columns that should not be spoken.
 Each column contains a single character --this is inspired
 by cut -c on UNIX.
-
-@end defvar
-
-@defvar {User Option} emacspeak-speak-load-directory-settings-quietly
-User option that affects loading of directory specific settings.
-If set to T,Emacspeak will not prompt before loading
-directory specific settings.
 
 @end defvar
 
@@ -20601,15 +20615,6 @@ prefix arg is equivalent to hitting the I’m Feeling Lucky button on Google.
 @end format
 @end deffn
 
-@subsubsection emacspeak-websearch-google-category-news
-@deffn {Command} emacspeak-websearch-google-category-news   
-@findex emacspeak-websearch-google-category-news
-
-@format
-Browse Google News by category.
-@end format
-@end deffn
-
 @subsubsection emacspeak-websearch-google-feeling-lucky
 @deffn {Command} emacspeak-websearch-google-feeling-lucky  (query)
 @findex emacspeak-websearch-google-feeling-lucky
@@ -21406,10 +21411,10 @@ With optional interactive prefix arg ‘frame’, move to previous frame instead
 @subsubsection emacspeak-select-this-buffer-next-display
 @deffn {Command} emacspeak-select-this-buffer-next-display   
 @table @kbd
-@item C-e <C-<right>
-@kindex C-e <C-<right>
-@item <fn> <C-<right>
-@kindex <fn> <C-<right>
+@item C-e <C-right>
+@kindex C-e <C-right>
+@item <fn> <C-right>
+@kindex <fn> <C-right>
 @end table
 
 @findex emacspeak-select-this-buffer-next-display
@@ -21446,10 +21451,10 @@ the display to select.
 @subsubsection emacspeak-select-this-buffer-previous-display
 @deffn {Command} emacspeak-select-this-buffer-previous-display   
 @table @kbd
-@item C-e <C-<left>
-@kindex C-e <C-<left>
-@item <fn> <C-<left>
-@kindex <fn> <C-<left>
+@item C-e <C-left>
+@kindex C-e <C-left>
+@item <fn> <C-left>
+@kindex <fn> <C-left>
 @end table
 
 @findex emacspeak-select-this-buffer-previous-display
@@ -21723,6 +21728,13 @@ Default is to add autoload cookies to current file.
 
 @subsubsection emacspeak-wizards-alpha-vantage-quotes
 @deffn {Command} emacspeak-wizards-alpha-vantage-quotes  (ticker &optional custom)
+@table @kbd
+@item C-e x a
+@kindex C-e x a
+@item <fn> x a
+@kindex <fn> x a
+@end table
+
 @findex emacspeak-wizards-alpha-vantage-quotes
 
 @format
@@ -22408,6 +22420,15 @@ Optional interactive prefix arg refreshes cache.
 @end format
 @end deffn
 
+@subsubsection emacspeak-wizards-iex-show-metadata
+@deffn {Command} emacspeak-wizards-iex-show-metadata   
+@findex emacspeak-wizards-iex-show-metadata
+
+@format
+Account metadata.
+@end format
+@end deffn
+
 @subsubsection emacspeak-wizards-iex-show-news
 @deffn {Command} emacspeak-wizards-iex-show-news  (symbol &optional refresh)
 @findex emacspeak-wizards-iex-show-news
@@ -22433,7 +22454,7 @@ Optional interactive prefix arg refreshes cache.
 @findex emacspeak-wizards-iex-show-price
 
 @format
-Quick Quote: Just stock price and volume from IEX Trading.
+Quick Quote: Just stock price from IEXCloud.
 
 (fn SYMBOL)
 @end format
@@ -22467,21 +22488,21 @@ P: Show live price for current stock.
 @end format
 @end deffn
 
+@subsubsection emacspeak-wizards-iex-show-tops
+@deffn {Command} emacspeak-wizards-iex-show-tops   
+@findex emacspeak-wizards-iex-show-tops
+
+@format
+Uses tops/last end-point to show brief portfolio quotes.
+@end format
+@end deffn
+
 @subsubsection emacspeak-wizards-iex-this-financials
 @deffn {Command} emacspeak-wizards-iex-this-financials   
 @findex emacspeak-wizards-iex-this-financials
 
 @format
 Show financials for symbol in current row
-@end format
-@end deffn
-
-@subsubsection emacspeak-wizards-iex-this-google-finance
-@deffn {Command} emacspeak-wizards-iex-this-google-finance   
-@findex emacspeak-wizards-iex-this-google-finance
-
-@format
-Lookup this ticker on Google Finance
 @end format
 @end deffn
 
@@ -22777,12 +22798,13 @@ Bring up weather forecast for current location.
 @format
 Top-level dispatch for looking up Stock Market information.
 
-Key:Action
-f: Financials
-G: finance Google Search
-n: News
-p: Price
-q: Quotes
+Key : Action
+f   :  Financials
+m   :  Account metadata 
+n   :  News
+p   :  Price
+q   :  Quotes
+t   :  tops/last 
 
 (fn &optional REFRESH)
 @end format
@@ -23511,6 +23533,14 @@ It’s useful to bind the above command to a convenient key.
 
 @end defvar
 
+@defvar {User Option} emacspeak-iex-api-key
+Web API  key for IEX Finance access.
+See IEX Login Console   at
+https://iexcloud.io/cloud-login/
+for how to get  an API key. 
+
+@end defvar
+
 @defvar {User Option} emacspeak-speak-telephone-directory
 File holding telephone directory.
 This is just a text file, and we use grep to search it.
@@ -24017,7 +24047,7 @@ Implements the Google Maps API
 @findex gmaps
 
 @format
-:around advice: ‘ad-Advice-gmaps’
+This function has :around advice: ‘ad-Advice-gmaps’.
 
 Google Maps Interaction.
 
@@ -24030,7 +24060,7 @@ Google Maps Interaction.
 @findex gmaps-bicycling-directions
 
 @format
-:around advice: ‘ad-Advice-gmaps-bicycling-directions’
+This function has :around advice: ‘ad-Advice-gmaps-bicycling-directions’.
 
 Biking directions from Google Maps.
 
@@ -24054,7 +24084,7 @@ Display  directions obtained from Google Maps.
 @findex gmaps-driving-directions
 
 @format
-:around advice: ‘ad-Advice-gmaps-driving-directions’
+This function has :around advice: ‘ad-Advice-gmaps-driving-directions’.
 
 Driving directions from Google Maps.
 
@@ -24119,7 +24149,7 @@ M-i		backward-button
 @findex gmaps-place-details
 
 @format
-:around advice: ‘ad-Advice-gmaps-place-details’
+This function has :around advice: ‘ad-Advice-gmaps-place-details’.
 
 Display details for place at point.
 Insert reviews if already displaying details.
@@ -24143,7 +24173,7 @@ Place details need to have been expanded first.
 @findex gmaps-places-nearby
 
 @format
-:around advice: ‘ad-Advice-gmaps-places-nearby’
+This function has :around advice: ‘ad-Advice-gmaps-places-nearby’.
 
 Find places near current location.
 Uses default radius. optional interactive prefix arg clears any active filters.
@@ -24157,7 +24187,7 @@ Uses default radius. optional interactive prefix arg clears any active filters.
 @findex gmaps-places-search
 
 @format
-:around advice: ‘ad-Advice-gmaps-places-search’
+This function has :around advice: ‘ad-Advice-gmaps-places-search’.
 
 Perform a places search.
 Use this only if you dont know the locality  of the place you’re looking for.
@@ -24184,7 +24214,7 @@ Optional interactive prefix arg prompts for all filter fields.
 @findex gmaps-set-current-location
 
 @format
-:around advice: ‘ad-Advice-gmaps-set-current-location’
+This function has :around advice: ‘ad-Advice-gmaps-set-current-location’.
 
  Set current location.
 
@@ -24197,7 +24227,7 @@ Optional interactive prefix arg prompts for all filter fields.
 @findex gmaps-set-current-radius
 
 @format
-:around advice: ‘ad-Advice-gmaps-set-current-radius’
+This function has :around advice: ‘ad-Advice-gmaps-set-current-radius’.
 
 Set current radius
 
@@ -24210,7 +24240,7 @@ Set current radius
 @findex gmaps-transit-directions
 
 @format
-:around advice: ‘ad-Advice-gmaps-transit-directions’
+This function has :around advice: ‘ad-Advice-gmaps-transit-directions’.
 
 Transit directions from Google Maps.
 
@@ -24223,7 +24253,7 @@ Transit directions from Google Maps.
 @findex gmaps-walking-directions
 
 @format
-:around advice: ‘ad-Advice-gmaps-walking-directions’
+This function has :around advice: ‘ad-Advice-gmaps-walking-directions’.
 
 Walking directions from Google Maps.
 
@@ -24645,7 +24675,7 @@ Adds  effect at the end of the effect list
 @findex sox-delete-effect-at-point
 
 @format
-:around advice: ‘ad-Advice-sox-delete-effect-at-point’
+This function has :around advice: ‘ad-Advice-sox-delete-effect-at-point’.
 
 Delete effect at point.
 
@@ -24684,7 +24714,7 @@ key             binding
 @findex sox-open-file
 
 @format
-:around advice: ‘ad-Advice-sox-open-file’
+This function has :around advice: ‘ad-Advice-sox-open-file’.
 
 Open specified snd-file on the Audio Workbench.
 
@@ -24706,7 +24736,7 @@ Play sound from current context.
 @findex sox-refresh
 
 @format
-:around advice: ‘ad-Advice-sox-refresh’
+This function has :around advice: ‘ad-Advice-sox-refresh’.
 
 Redraw Audio Workbench.
 
@@ -25537,7 +25567,7 @@ Step-size used when incrementing and decrementing brightness.
 @node URL Templates 
 @section URL Templates
 
-This section documents a total of 87 URL Templates.
+This section documents a total of 84 URL Templates.
 
 All of these URL templates can be invoked via command
  @kbd{M-x emacspeak-url-template-fetch} normally bound to
@@ -25551,10 +25581,6 @@ Each URL template carries out the following steps:
 @item Set up the resulting resource with appropriate
  customizations.
 @end itemize
-
-As an example, the URL template for weather forecasts
-prompts for a location and speaks the forecast. 
-
 @enumerate 
 
 @item @b{AQI: Air Quality Index}
@@ -25569,17 +25595,13 @@ Retrieve product details from Amazon by either ISBN or ASIN.@item @b{Anonymize G
 
 Logout from Google to do an anonymous search.@item @b{ArchWiki Search}
 
-Search Linux ArchWiki@item @b{BBC Genre Using IPlayer}
+Search Linux ArchWiki@item @b{BBC Podcast Directory}
 
-BBC iPlayer Genre@item @b{BBC Podcast Directory}
-
-BBC PodCast Directory@item @b{BBC Program Guide}
+BBC PodCast Directory@item @b{BBC Program Guide (not maintained)}
 
 Display interactive BBC Program Guide.@item @b{BBC World News Summary}
 
-BBC World News Summary@item @b{BBC iPlayer}
-
-BBC iPlayer@item @b{Baseball Box Scores}
+BBC World News Summary@item @b{Baseball Box Scores}
 
 Display baseball Play By Play.@item @b{Baseball Game Details}
 
@@ -25633,23 +25655,21 @@ Browse GoLang package documentation.@item @b{GoLang Lookup}
 
 Lookup GoLang package documentation.@item @b{GoLang Search}
 
-Search GoLang package documentation.@item @b{Google Category News}
+Search GoLang package documentation.@item @b{Google Basic}
 
-Google News By Category.@item @b{Google Image Search}
+Light-weight Google search.@item @b{Google Image Search}
 
 Google Image Search@item @b{Google News Search}
 
-Search Google news.@item @b{Google Regional News}
-
-Google News By Region.@item @b{Google Related Trends}
-
-Display Related Query Trends.@item @b{Google Scholar}
+Search Google news.@item @b{Google Scholar}
 
 Google Scholar Search@item @b{Google Transcoder}
 
 Transcode site via Google.@item @b{Google Trends}
 
-Google Trends@item @b{Google Webmaster Page Analysis}
+Google Trends@item @b{Google Weather}
+
+Light-weight Google search.@item @b{Google Webmaster Page Analysis}
 
 Page Analysis From Google Webmaster tools.@item @b{Guardian RSS Feeds Directory}
 
@@ -25659,12 +25679,7 @@ Show MLB Scorecard.@item @b{MLB standings}
 
 Display MLB standings.@item @b{Money Headlines From CNN}
 
-Money Headlines From CNN@item @b{Multilingual dictionary via Google.}
-
-Translate word using Google.
-Source and target languages
-are specified as two-letter language codes, e.g. en|de translates
-from English to German@item @b{NBA  standings}
+Money Headlines From CNN@item @b{NBA  standings}
 
 Display NBA standings.@item @b{NLS Bard Popular}
 
@@ -25694,9 +25709,13 @@ RadioTime Categories .@item @b{RadioTime Search}
 
 RadioTime Search.@item @b{Reddit At Point.}
 
-Open RSS Feed for Reddit URL under point.@item @b{RedditBy Topic.}
+Open RSS Feed for Reddit URL under point.@item @b{Reddit By Topic.}
 
-Open RSS Feed for Reddit Topic.@item @b{Seeking Alpha Stock Search}
+Open RSS Feed for Reddit Topic.@item @b{Reddit Front Page.}
+
+Open  Feed for Reddit  Front Page.@item @b{Reddit Search.}
+
+Reddit Search Results Feed.@item @b{Seeking Alpha Stock Search}
 
 Seeking Alpha search.@item @b{Sign in to Google}
 
@@ -25730,9 +25749,7 @@ Display package tracking information from Fedex.@item @b{html Google News Search
 
 Search Google news.@item @b{html5IRC}
 
-Show HTML5 IRC log.@item @b{rss weather from wunderground}
-
-Pull RSS weather feed for specified state/city.@item @b{sourceforge Download}
+Show HTML5 IRC log.@item @b{sourceforge Download}
 
 Download specified file.@item @b{sourceforge browse mirrors}
 

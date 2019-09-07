@@ -179,6 +179,8 @@ that implements the speech-enabling extensions for `package' (a string)."
 (emacspeak-do-package-setup "ecb" 'emacspeak-ecb)
 (emacspeak-do-package-setup "ein" 'emacspeak-ein)
 (emacspeak-do-package-setup "cus-edit" 'emacspeak-custom)
+(emacspeak-do-package-setup "deadgrep" 'emacspeak-deadgrep)
+(emacspeak-do-package-setup "debugger" 'emacspeak-debugger)
 (emacspeak-do-package-setup "desktop" 'emacspeak-desktop)
 (emacspeak-do-package-setup "diff-mode" 'emacspeak-diff-mode)
 (emacspeak-do-package-setup "dired" 'emacspeak-dired)
@@ -258,6 +260,7 @@ that implements the speech-enabling extensions for `package' (a string)."
 (emacspeak-do-package-setup "navi-mode" 'emacspeak-navi-mode)
 (emacspeak-do-package-setup "net-utils" 'emacspeak-net-utils)
 (emacspeak-do-package-setup "newsticker" 'emacspeak-newsticker)
+(emacspeak-do-package-setup "nov" 'emacspeak-nov)
 (emacspeak-do-package-setup "nxml-mode" 'emacspeak-nxml)
 (emacspeak-do-package-setup "org" 'emacspeak-org)
 (emacspeak-do-package-setup "origami" 'emacspeak-origami)
@@ -425,7 +428,6 @@ caps."
 ;;}}}
 ;;{{{ Emacspeak:
 
-
 (defcustom emacspeak-play-emacspeak-startup-icon t
   "If set to T, emacspeak plays its icon as it launches."
   :type 'boolean
@@ -521,7 +523,6 @@ commands and options for details."
        emacspeak-version)))
     (emacspeak-play-startup-icon)))
 
-
 (defun emacspeak-info ()
   "Open Emacspeak Info Manual."
   (interactive)
@@ -539,12 +540,17 @@ commands and options for details."
   (emacspeak-speak-buffer))
 
 ;;}}}
+;;{{{Advice find-func:
+(eval-after-load
+    "find-func"
+  `(progn
+     (emacspeak-fix-commands-loaded-from "find-func")))
+;;}}}
 (provide 'emacspeak)
 ;;{{{ end of file
 
 ;;; local variables:
 ;;; folded-file: t
-;;; byte-compile-dynamic: t
 ;;; end:
 
 ;;}}}

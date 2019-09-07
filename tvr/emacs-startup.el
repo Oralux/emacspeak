@@ -32,7 +32,7 @@
     "kbd-setup"
     "vm-prepare" "gnus-gmail-prepare" "bbdb-prepare" "elfeed-prepare"
     "lispy-prepare" "sp-prepare"        "vdiff-prepare" "iedit-prepare"
-    "auctex-prepare" "org-prepare"
+    "auctex-prepare" "org-prepare" 
                                         ;"use-emms"
     "calc-prepare" "helm-prepare"
     "js-prepare" "tcl-prepare" "slime-prepare" "yasnippet-prepare"
@@ -56,10 +56,14 @@
 ;;}}}
 ;;{{{ helper functions:
 
-(defsubst tvr-time-it (start what)
+(defsubst tvr-time-it (what &optional start)
   "Time code."
+  (or start (setq start (current-time)))
   (message "<%s %.4f %d gcs %.4f>"
-           what (float-time (time-subtract (current-time) start))
+           (if (stringp what)
+               what
+             (format "%s" what))
+           (float-time (time-subtract (current-time) start))
            gcs-done gc-elapsed))
 
 (defun load-library-if-available (lib)
@@ -69,7 +73,7 @@
      (condition-case err
          (progn
            (load-library lib)
-           (tvr-time-it start lib))
+           (tvr-time-it lib start))
        (error (message "Error loading %s: %s" lib (error-message-string err)))))))
 
 ;;}}}
@@ -84,6 +88,10 @@
     ("PowderBlue" "gold")
     ("#FFF3FF" "gold"))                 ; lavender blush
   "Alist of color pairs for days of the week")
+
+(defun bw ()
+  "set foreground to black"
+  (set-foreground-color "black"))
 
 (defun tvr-set-color-for-today ()
   "Return color pair for today."
@@ -164,7 +172,7 @@
      (start-process
       "play" nil "aplay"
       (expand-file-name "highbells.au" emacspeak-sounds-directory))
-     (tvr-time-it after-start "after-init"))))
+     (tvr-time-it "after-init" after-start))))
 
 (add-hook 'after-init-hook #'tvr-after-init)
 (add-hook
@@ -276,7 +284,11 @@ gcs (%.2f seconds)>"
    (save-place-mode)
    (midnight-mode)
    (server-start)
-   (and (fboundp 'pinentry-start) (pinentry-start)))
+;;; Forge:
+
+   (with-eval-after-load 'magit
+       (require 'forge))
+   )
 
   ;;}}}
   ) ;end defun
@@ -304,18 +316,6 @@ gcs (%.2f seconds)>"
 (provide 'emacs-startup)
 ;;{{{  emacs local variables
 
-(custom-set-variables
- ;; custom-set-variables was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- '(safe-local-variable-values '((folded-file . t))))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
 ;;;local variables:
 ;;;folded-file: t
 ;;;end:
