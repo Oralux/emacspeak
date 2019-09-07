@@ -37,6 +37,36 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+/*
+ * The following declarations are derived from the publically
+ * available documentation for Voxin.
+ */
+
+typedef enum {voxFemale, voxMale} voxGender;
+typedef enum {voxAdult, voxChild, voxSenior} voxAge;
+
+#define VOX_ECI_VOICES 22
+#define VOX_RESERVED_VOICES 30
+#define VOX_MAX_NB_OF_LANGUAGES (VOX_ECI_VOICES + VOX_RESERVED_VOICES)
+#define VOX_STR_MAX 128
+
+typedef struct {
+  uint32_t id;
+  char name[VOX_STR_MAX];
+  char lang[VOX_STR_MAX];
+  char variant[VOX_STR_MAX];
+  uint32_t rate;
+  uint32_t  size;
+  char charset[VOX_STR_MAX];
+  voxGender gender;
+  voxAge age;
+  char multilang[VOX_STR_MAX];
+  char quality[VOX_STR_MAX];
+} vox_t;
+
+static int (*_voxGetVoices)(vox_t *list, unsigned int *nbVoices);
+
+
 enum ECILanguageDialect {
   NODEFINEDCODESET = 0x00000000,
   eciGeneralAmericanEnglish = 0x00010000,
@@ -63,40 +93,26 @@ enum ECILanguageDialect {
   eciStandardFinnish = 0x00090000
 };
 
-// From libvoxin 1.4.0
-typedef enum {voxFemale, voxMale} voxGender;
-typedef enum {voxAdult, voxChild, voxSenior} voxAge;
-
-#define VOX_ECI_VOICES 22
-#define VOX_RESERVED_VOICES 30
-#define VOX_MAX_NB_OF_LANGUAGES (VOX_ECI_VOICES + VOX_RESERVED_VOICES)
-#define VOX_STR_MAX 128
-
 typedef struct {
-  uint32_t id; // voice identifier
-  char name[VOX_STR_MAX]; // optional: 'Yelda',...
-  char lang[VOX_STR_MAX]; // ietf sub tag, iso639-1, 2 letters code: 'en', 'tr',...
-  char variant[VOX_STR_MAX]; // ietf sub tag, optional: 'scotland', 'CA',...
-  uint32_t rate; // sample rate in Hertz: 11025, 22050
-  uint32_t  size; // sample size e.g. 16 bits
-  /* chanels = 1 */
-  /* encoding = signed-integer PCM */
-  char charset[VOX_STR_MAX]; // "UTF-8", "ISO-8859-1",...
-  voxGender gender;
-  voxAge age;
-  char multilang[VOX_STR_MAX]; // optional, e.g. "en,fr"
-  char quality[VOX_STR_MAX]; // optional, e.g. "embedded-compact"
-} vox_t;
-// <--
+  int rate; // speech rate
+  unsigned int size; // number of bits per sample
+  char setLang[VOX_STR_MAX]; // inline command to switch to this language
+} voiceFeature_t;
 
-#define ANNOTATION_MAX_SIZE 16
 
-uint32_t initLanguage(Tcl_Interp *interp,
-		      enum ECILanguageDialect *aLanguages,
-		      unsigned int nLanguages,
-		      vox_t *voices,
-		      unsigned int number_of_voices);
-const char* getAnnotation(Tcl_Interp* interp);
+//
+enum { ANNOTATION_MAX_SIZE = 12};
+int SetLanguage(ClientData, Tcl_Interp*, int, Tcl_Obj* CONST[]);
+enum ECILanguageDialect initLanguage(Tcl_Interp* interp,
+                                     enum ECILanguageDialect* aLanguages,
+                                     int nLanguages);
+int getVoiceFeature(Tcl_Interp* interp, voiceFeature_t* v);
+
+// convertFromUTF8 converts the utf-8 src string to the charset
+// expected by the TTS engine; the returned string must be freed by the caller
+// 
+// Return null if no conversion needed or internal error
 char* convertFromUTF8(Tcl_Interp* interp, const char* theString);
+void initVoices(vox_t *voices, unsigned int number_of_voices);
 
 #endif

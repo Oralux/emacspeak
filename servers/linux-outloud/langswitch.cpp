@@ -5,107 +5,74 @@
 //
 // >
 // <includes
-#include "langswitch.h"
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include <ctype.h>
+#include "langswitch.h"
 // >
 // <decls and function prototypes
 
-struct voiceInfo {
-	uint32_t id; // eci identifier (ECILanguageDialect + extended values)
-	const char *code; // "en_US",...
-	const char *charset;
-	const char *id2; // language identifier for the eci annotation 
-	const char *name; // language or voice name
+typedef struct _eciLocale {
+  const char *name;
+  const char *lang;
+  const char *dialect;
+  enum ECILanguageDialect langID;
+  const char *charset;
+  const char *code;
+  int rate;
+} eciLocale, *eciLocaleList;
+
+static eciLocale eciLocales[VOX_MAX_NB_OF_LANGUAGES+1] = { /* +1 for a null element */
+  {"American_English", "en", "US", eciGeneralAmericanEnglish, "iso8859-1", "1.0", 11025},
+  {"British_English", "en", "GB", eciBritishEnglish, "iso8859-1", "1.1", 11025},
+  {"Castilian_Spanish", "es", "ES", eciCastilianSpanish, "iso8859-1", "2.0", 11025},
+  {"Mexican_Spanish", "es", "MX", eciMexicanSpanish, "iso8859-1", "2.1", 11025},
+  {"French", "fr", "FR", eciStandardFrench, "iso8859-1", "3.0", 11025},
+  {"Canadian_French", "ca", "FR", eciCanadianFrench, "iso8859-1", "3.1", 11025},
+  {"German", "de", "DE", eciStandardGerman, "iso8859-1", "4.0", 11025},
+  {"Italian", "it", "IT", eciStandardItalian, "iso8859-1", "5.0", 11025},
+  {"Mandarin_Chinese", "zh", "CN", eciMandarinChinese, "gb2312", "6.0", 11025},
+  {"Mandarin_Chinese GB", "zh", "CN_GB", eciMandarinChineseGB, "gb2312", "6.0", 11025},
+  {"Mandarin_Chinese PinYin", "zh", "CN_PinYin", eciMandarinChinesePinYin, "gb2312", "6.0.1", 11025},
+  {"Mandarin_Chinese UCS", "zh", "CN_UCS", eciMandarinChineseUCS, "unicode", "6.0.8", 11025},
+  {"Taiwanese_Mandarin", "zh", "TW", eciTaiwaneseMandarin, "big5", "6.1", 11025},
+  {"Taiwanese_Mandarin Big 5", "zh", "TW_Big5", eciTaiwaneseMandarinBig5,"big5", "6.1", 11025},
+  {"Taiwanese_Mandarin ZhuYin", "zh", "TW_ZhuYin",eciTaiwaneseMandarinZhuYin, "big5", "6.1.1", 11025},
+  {"Taiwanese_Mandarin PinYin", "zh", "TW_PinYin",eciTaiwaneseMandarinPinYin, "big5", "6.1.2", 11025},
+  {"Taiwanese_Mandarin UCS", "zh", "TW_UCS", eciTaiwaneseMandarinUCS, "unicode", "6.1.8", 11025},
+  {"Brazilian_Portuguese", "pt", "BR", eciBrazilianPortuguese, "iso8859-1", "7.0", 11025},
+  {"Japanese", "ja", "JP", eciStandardJapanese, "shiftjis", "8.0", 11025},
+  {"Japanese_SJIS", "ja", "JP_SJIS", eciStandardJapaneseSJIS, "shiftjis", "8.0", 11025},
+  {"Japanese_UCS", "ja", "JP_UCS", eciStandardJapaneseUCS, "unicode", "8.0.8", 11025},
+  {"Finnish", "fi", "FI", eciStandardFinnish, "iso8859-1", "9.0", 11025},
 };
 
-static struct voiceInfo TheLanguages[VOX_MAX_NB_OF_LANGUAGES+1] = { // +1 for the last zeroed element
-    {eciGeneralAmericanEnglish, "en_US", "iso8859-1", "1.0", "American"},
-    {eciBritishEnglish, "en_GB", "iso8859-1", "1.1", "British"},
-    {eciCastilianSpanish, "es_ES", "iso8859-1", "2.0", "Español"},
-    {eciMexicanSpanish, "es_MX", "iso8859-1", "2.1", "Mexicano"},
-    {eciStandardFrench, "fr_FR", "iso8859-1", "3.0", "Français"},
-    {eciCanadianFrench, "fr_CA", "iso8859-1", "3.1", "Français Canadien"},
-    {eciStandardGerman, "de_DE", "iso8859-1", "4.0", "Deutsch"},
-    {eciStandardItalian, "it_IT", "iso8859-1", "5.0", "Italiano"},
-    {eciMandarinChinese, "zh_CN", "gb2312", "6.0", "Chinese Simplified"},
-    {eciMandarinChineseGB, "zh_CN", "gb2312", "6.0", "Chinese Simplified"},
-    {eciMandarinChinesePinYin, "zh_CN", "gb2312", "6.0.1", "Chinese Simplified"},
-    {eciMandarinChineseUCS, "zh_CN", "UCS2", "6.0.8", "Chinese Simplified"},
-    {eciTaiwaneseMandarin, "zh_HK", "big5", "6.1", "Chinese Traditional"},
-    {eciTaiwaneseMandarinBig5, "zh_HK", "big5", "6.1", "Chinese Traditional"},
-    {eciTaiwaneseMandarinZhuYin, "zh_HK", "big5", "6.1.1", "Chinese Traditional"},
-    {eciTaiwaneseMandarinPinYin, "zh_HK", "big5", "6.1.2", "Chinese Traditional"},
-    {eciTaiwaneseMandarinUCS, "zh_HK", "UCS2", "6.1.8", "Chinese Traditional"},
-    {eciBrazilianPortuguese, "pt_BR", "iso8859-1", "7.0", "Brazilian Portuguese"},
-    {eciStandardJapanese, "ja_JP", "shiftjis", "8.0", "Japanese"},
-    {eciStandardJapaneseSJIS, "ja_JP", "shiftjis", "8.0", "Japanese"},
-    {eciStandardJapaneseUCS, "ja_JP", "UCS2", "8.0.8", "Japanese"},
-    {eciStandardFinnish, "fi_FI", "iso8859-1", "9.0", "Finnish"},
-};
+/* voices returned by libvoxin, some values (name, quality) can be
+   modified for compatibility with emacspeak):
+   - quality is appended to name to differentiate distinct voices with
+     same name but distinct qualities
+   - if quality is unset (empty), it is set to "none"
+*/
 
-static char code[VOX_RESERVED_VOICES][VOX_STR_MAX];
-static char charset[VOX_RESERVED_VOICES][VOX_STR_MAX];
-static char id2[VOX_RESERVED_VOICES][VOX_STR_MAX];
-static char name[VOX_RESERVED_VOICES][VOX_STR_MAX];
+struct langInfo {
+  enum ECILanguageDialect lang;
+  const char *code;
+  const char *encoding;
+  const char *label;
+};
 
 // >
 // <initLanguage
-
-uint32_t initLanguage(Tcl_Interp *interp,
-		      enum ECILanguageDialect *aLanguages,
-		      unsigned int nLanguages,
-		      vox_t *voices,
-		      unsigned int number_of_voices) {
+enum ECILanguageDialect initLanguage(Tcl_Interp *interp,
+                                     enum ECILanguageDialect *aLanguages,
+                                     int nLanguages) {
   // List the available languages
-  unsigned int i = 0;
+  int i = 0;
   int j = 0;
-  uint32_t aCurrentLanguage, aEnglishLanguage, aFirstLanguage;
+  enum ECILanguageDialect aCurrentLanguage, aEnglishLanguage, aFirstLanguage;
   aCurrentLanguage = aEnglishLanguage = aFirstLanguage = NODEFINEDCODESET;
   const char *aDefaultLang = getenv("LANGUAGE");
 
-  static int a = 1;
-  while(a) {
-    sleep(1);
-  }
-  
-  // update TheLanguages array with any non ECI voice installed
-  if (number_of_voices && voices) {
-    unsigned int id_min = TheLanguages[VOX_ECI_VOICES-1].id;
-    if (number_of_voices > VOX_RESERVED_VOICES) {
-      number_of_voices = VOX_RESERVED_VOICES;
-    }
-    for (i=0,j=0; i<number_of_voices; i++) {
-      if (voices[i].id <= id_min)
-	continue;
-
-      TheLanguages[j+VOX_ECI_VOICES].id = voices[i].id;
-      
-      TheLanguages[j+VOX_ECI_VOICES].code = code[j];
-      if ((voices[i].variant) && (*voices[i].variant)) {
-	snprintf(code[j], VOX_STR_MAX, "%s_%s", voices[i].lang, voices[i].variant);
-      } else {
-	snprintf(code[j], VOX_STR_MAX, "%s", voices[i].lang);
-      }
-      code[j][VOX_STR_MAX-1] = 0;
-		  
-      TheLanguages[j+VOX_ECI_VOICES].charset = charset[j];
-      strncpy(charset[j], voices[i].charset, VOX_STR_MAX);
-      charset[j][VOX_STR_MAX-1] = 0;
-      
-      TheLanguages[j+VOX_ECI_VOICES].id2 = id2[j];
-      snprintf(id2[j], VOX_STR_MAX, "x%0x", voices[i].id);
-      id2[j][VOX_STR_MAX-1] = 0;
-      
-      TheLanguages[j+VOX_ECI_VOICES].name = name[j];
-      strncpy(name[j], voices[i].name, VOX_STR_MAX);
-      name[j][VOX_STR_MAX-1] = 0;
-      
-      j++;
-    }
-  }
-  
   if (aDefaultLang == NULL) {
     aDefaultLang = getenv("LANG");
     if (aDefaultLang == NULL) {
@@ -118,52 +85,81 @@ uint32_t initLanguage(Tcl_Interp *interp,
 
   Tcl_SetVar2(interp, "langsynth", "current", "0", 0);
 
-  for (i = 0; (i < VOX_MAX_NB_OF_LANGUAGES) && TheLanguages[i].id; i++) {
-      char buffer_i[3];
-      snprintf(buffer_i, 3, "%d", i);
+  // langalias Tcl array
+  // associate language code to index+1 in eciLocales
+  // index: language code (en_US), value: index+1 in eciLocales (1)
+  //
+  // set langalias("en_US")  1
+  // set langalias("en_GB")  2
+  // set langalias("es_ES")  3
+  for (i = 0; i < VOX_MAX_NB_OF_LANGUAGES; i++) {
+    if (eciLocales[i].name != NULL) {
       char command[40];
-      sprintf(command, "set langalias(%s)  %s\n",
-              const_cast<char *>(TheLanguages[i].code), buffer_i);
+	  const size_t len = sizeof(command);
+      snprintf(command, len,
+			   "set langalias(%s_%s)  %d\n",
+			   const_cast<char *>(eciLocales[i].lang),
+			   const_cast<char *>(eciLocales[i].dialect),
+			   i+1);
+	  command[len-1] = 0;
       // int rc = /* unused */
       Tcl_Eval(interp, command);
-      printf("dbg: command=%s\n", command); // TODO
+    }
   }
 
+  // langsynth Tcl array
+  // array of the installed voices
+  // index: integer, value: index+1 in eciLocales
+  // For example if "en_US" and "es_ES" are installed
+  // set langsynth(0)  1
+  // set langsynth(1)  3
+
+  // langlabel Tcl array
+  // array of the name of the installed voices
+  // index: integer, value: voice name
+  // For example if "en_US" and "es_ES" are installed
+  // set langsynth(0)  "American English"
+  // set langsynth(1)  "Castillan Spanish"
+  // set langsynth(top)  1
   int aCurrentLangIndex = 0;
   int aEnglishLangIndex = 0;
   int aFirstLangIndex = 0;
 
   for (i = 0; i < nLanguages; i++) {
     int aLang = 0;
-    char buffer_i[3];
-    char buffer_j[3];
+    char buffer_i[20];
+    char buffer_j[20];
 
-    for (aLang = 0; aLang < VOX_MAX_NB_OF_LANGUAGES; aLang++) {
-      if (TheLanguages[aLang].id == aLanguages[i]) break;
+	*buffer_i = *buffer_j = 0;
+    for (aLang = 0; (aLang < VOX_MAX_NB_OF_LANGUAGES) && eciLocales[aLang].name; aLang++) {
+      if (eciLocales[aLang].langID == aLanguages[i]) {
+		snprintf(buffer_i, sizeof(buffer_i), "%d", aLang+1);
+		break;
+	  }
     }
 
-    if ((aLang == VOX_MAX_NB_OF_LANGUAGES) || (TheLanguages[aLang].code == NULL)) {
+    if (!*buffer_i) {
       continue;
     }
 
-    snprintf(buffer_i, 3, "%d", aLang);
-    snprintf(buffer_j, 3, "%d", j++);
-    Tcl_SetVar2(interp, "langsynth", buffer_j, buffer_i, 0); printf("dbg: langsynth %s %s\n", buffer_j, buffer_i); // TODO
+    snprintf(buffer_j, sizeof(buffer_j), "%d", j++);
+    Tcl_SetVar2(interp, "langsynth", buffer_j, buffer_i, 0);
 
     if (aCurrentLanguage == NODEFINEDCODESET) {
-      if (strncmp(aDefaultLang, TheLanguages[aLang].code, 2) == 0) {
-        aCurrentLanguage = TheLanguages[aLang].id;
-        aCurrentLangIndex = aLang;
-      } else if (strncmp("en", TheLanguages[aLang].code, 2) == 0) {
-        aEnglishLanguage = TheLanguages[aLang].id;
-        aEnglishLangIndex = aLang;
+      if (strncmp(aDefaultLang, eciLocales[aLang].lang, 2) == 0) {
+        aCurrentLanguage = eciLocales[aLang].langID;
+        aCurrentLangIndex = aLang+1;
+      } else if (strncmp("en", eciLocales[aLang].lang, 2) == 0) {
+        aEnglishLanguage = eciLocales[aLang].langID;
+        aEnglishLangIndex = aLang+1;
       } else if (j == 1) {
-        aFirstLanguage = TheLanguages[aLang].id;
-        aFirstLangIndex = aLang;
+        aFirstLanguage = eciLocales[aLang].langID;
+        aFirstLangIndex = aLang+1;
       }
     }
-    Tcl_SetVar2(interp, "langlabel", buffer_j, const_cast<char *>(TheLanguages[aLang].name), 0); printf("dbg: langlabel %s %s\n", buffer_j, TheLanguages[aLang].name); // TODO
-    Tcl_SetVar2(interp, "langsynth", "top", buffer_j, 0); printf("dbg: langsynth top %s\n", buffer_j); // TODO
+    Tcl_SetVar2(interp, "langlabel", buffer_j,
+                const_cast<char *>(eciLocales[aLang].name), 0);
+    Tcl_SetVar2(interp, "langsynth", "top", buffer_j, 0);
   }
 
   if (aCurrentLanguage == NODEFINEDCODESET) {
@@ -177,68 +173,146 @@ uint32_t initLanguage(Tcl_Interp *interp,
   }
 
   if (aCurrentLanguage != NODEFINEDCODESET) {
-    char buffer_i[3];
-    snprintf(buffer_i, 3, "%d", aCurrentLangIndex);
-    Tcl_SetVar2(interp, "langsynth", "current", buffer_i, 0); printf("dbg: langsynth current %s\n", buffer_i); // TODO
+    char buffer_i[20];
+    snprintf(buffer_i, sizeof(buffer_i), "%d", aCurrentLangIndex);
+    Tcl_SetVar2(interp, "langsynth", "current", buffer_i, 0);
   }
 
   return aCurrentLanguage;
 }
 // >
-// <getIndex returns the index of the voice in the TheLanguages array.
-// Return VOX_MAX_NB_OF_LANGUAGES if error (TheLanguages[VOX_MAX_NB_OF_LANGUAGES] is the final zeroed element).
-static int getIndex(Tcl_Interp *interp) {
-  int index = VOX_MAX_NB_OF_LANGUAGES;
-  if (interp) {
-	  const char *aInfo = Tcl_GetVar2(interp, "langsynth", "current", 0);
-	  if (aInfo) {
-		  int i = atoi(aInfo);
-		  if ((i >= 0) && (i< VOX_MAX_NB_OF_LANGUAGES))
-			  index = i;
-	  }
+// <checkIndex, getIndex
+
+static int checkIndex(int theIndex) {
+  return ((theIndex > 0) && (theIndex <= VOX_MAX_NB_OF_LANGUAGES) && eciLocales[theIndex-1].name);
+}
+
+static int getIndex(Tcl_Interp *interp, int *theIndex) {
+  int res = 0;
+  const char *aInfo = Tcl_GetVar2(interp, "langsynth", "current", 0);
+
+  if (aInfo) {
+    *theIndex = atoi(aInfo);
+    res = checkIndex(*theIndex);
   }
-  printf("dbg: getIndex=%d\n", index); // TODO
-  return index;
+  return res;
 }
 
 // >
-// <getAnnotation returns the ECI annotation for selecting the current
-// voice.
-// Return a pointer on a constant string, which must not be freed by
-// the caller.
-
-const char *getAnnotation(Tcl_Interp *interp) {
-  return TheLanguages[getIndex(interp)].id2;
+// <getAnnotation
+const char* getAnnotation(int theIndex) {
+  return (checkIndex(theIndex)) ? eciLocales[theIndex-1].code : NULL;
 }
-
 // >
-// <convertFromUTF8 converts src from utf-8 to the charset expected by
-// the voice.
-// Return a pointer on a string which must be freed by the caller.
-// Return NULL otherwise (e.g. if the voice expects utf-8) 
+// <convertFromUTF8
 char *convertFromUTF8(Tcl_Interp *interp, const char *src) {
   char *dest = NULL;
+  int aIndex = 0;
+  const char *aCharset = NULL;
+
+  if (!interp || !src || !getIndex(interp, &aIndex))
+	return NULL;
   
-  if (!interp || !src)
-    return NULL;
+  aCharset = eciLocales[aIndex-1].charset;
+  if (!aCharset || !strcmp("utf_8", aCharset))
+	return NULL;
+	  
+  // convert src from utf-8 to the expected encoding
+  int srcReadPtr = 0;
+  int destWrotePtr = 0;
+  int destCharsPtr = 0;
+  int srcLen = -1;
+  int aLength = 2 * strlen(src) + 1;
+  dest = new char[aLength];
+  if (!dest)
+	return NULL;
   
-  int i = getIndex(interp);	
-  if (TheLanguages[i].charset && strcasecmp(TheLanguages[i].charset, "UTF-8")) {	
-    int srcReadPtr = 0;
-    int destWrotePtr = 0;
-    int destCharsPtr = 0;
-    int aLength = 2 * strlen(src) + 1;
-    Tcl_Encoding charset = Tcl_GetEncoding(interp, TheLanguages[i].charset);
-    if (charset) {
-      dest = new char[aLength];	  
-      Tcl_UtfToExternal(interp, charset, src, -1, 0, NULL, dest, aLength,
-			&srcReadPtr, &destWrotePtr, &destCharsPtr);
-    }
+  Tcl_Encoding encoding = Tcl_GetEncoding(interp, aCharset);
+  if (!encoding) {
+	free(dest);
+	return NULL;
   }
-    
+  
+  Tcl_UtfToExternal(interp, encoding, src, srcLen, 0, NULL, dest, aLength,
+					&srcReadPtr, &destWrotePtr, &destCharsPtr);
+
   return dest;
 }
+
 // >
+// <initVoices
+
+void initVoices(vox_t *voices, unsigned int number_of_voices) {
+  unsigned int i, j;
+  unsigned int min_id = eciLocales[VOX_ECI_VOICES-1].langID;
+
+  if (!voices || (number_of_voices > VOX_RESERVED_VOICES))
+	return;
+  
+  for (i=0, j=VOX_ECI_VOICES; i<number_of_voices; i++) {
+	eciLocale *local = eciLocales + j;
+	size_t len = 0;
+	vox_t *vox = voices + i;
+	if (vox->id <= min_id) /* id already known? */
+	  continue;
+
+	fprintf(stderr, "vox[%d]=id=0x%x, name=%s, lang=%s, variant=%s, charset=%s\n",
+			i, vox->id, vox->name, vox->lang, vox->variant, vox->charset);
+
+	if (!*vox->variant) {
+	  strcpy(vox->variant, "none");
+	}
+
+	len = strnlen(vox->name, VOX_STR_MAX-1);
+
+	/* convert the name to lower case and add the quality */
+	{
+	  unsigned int k;
+	  const size_t max = sizeof(vox->name);
+	  for (k=0; k<len; k++) {
+		vox->name[k] = tolower(vox->name[k]);
+	  }
+	  if (*vox->quality && (len < max)) {
+		snprintf(vox->name+len, max-len, "-%s", vox->quality);
+		vox->name[max-1] = 0;
+	  }
+	}
+
+	local->name = vox->name;
+	local->lang = vox->lang;
+	local->dialect = vox->variant;
+	local->langID = (enum ECILanguageDialect)vox->id;
+	// convert the charset name to its Tcl encoding equivalent
+	local->charset = (!strcmp("UTF-8", vox->charset)) ? "utf-8" : "unicode";
+	{ // langID is the parameter of the 'set language' annotation 
+	  char code[10];
+	  const size_t max = sizeof(code);
+	  snprintf(code, max, "x%08x", local->langID & 0xFFFFFFFF);
+	  code[max-1] = 0;	  
+	  local->code = code;
+	}
+	local->rate = vox->rate;
+	fprintf(stderr, "local[%d]=langID=0x%x, name=%s, lang=%s,\
+	dialect=%s, charset=%s, rate=%d\n",
+			i, local->langID, local->name, local->lang,
+			local->dialect, local->charset, local->rate);
+	j++;
+  }
+}
+// >
+// <getVoiceFeature
+int getVoiceFeature(Tcl_Interp* interp, voiceFeature_t* v) {
+  int aIndex = 0;
+
+  if (!interp || !v || !getIndex(interp, &aIndex))
+	return 0;
+
+  v->rate = eciLocales[aIndex-1].rate;
+  snprintf(v->setLang,sizeof(v->setLang),"`l%s", eciLocales[aIndex-1].code);
+  return 1;
+}
+// >
+
 // <end of file
 // local variables:
 // folded-file: t

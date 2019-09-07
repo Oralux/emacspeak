@@ -142,16 +142,9 @@ static int (*_eciSetOutputBuffer)(void *, int, short *);
 static int (*_eciSetOutputDevice)(void *, int);
 static void (*_eciRegisterCallback)(void *, int (*)(void *, int, long, void *),
                                     void *);
-
-static int (*_voxGetVoices)(vox_t *, unsigned int *);
-
-//
-static vox_t voices[VOX_RESERVED_VOICES];
-static unsigned int number_of_voices = VOX_RESERVED_VOICES;
-//
-static size_t alsa_init();
+static size_t alsa_init(unsigned int rate);
 static void alsa_reset();  // drop handle and reset
-static size_t alsa_configure(void);
+static size_t alsa_configure(unsigned int rate);
 
 extern "C" int Atcleci_Init(Tcl_Interp *interp);
 
@@ -173,12 +166,11 @@ int eciCallback(void *, int, long, void *);
 //>
 //<alsa: set hw and sw params
 
-static size_t alsa_configure(void) {
+static size_t alsa_configure(unsigned int rate) {
   //<init:
   size_t chunk_bytes, bits_per_sample, bits_per_frame = 0;
   snd_pcm_uframes_t period_size, buffer_size = 0;
   snd_pcm_hw_params_t *params;
-  unsigned int rate = DEFAULT_SPEED;
   int err;
   snd_pcm_hw_params_alloca(&params);
   //>
@@ -364,7 +356,7 @@ void alsa_reset() {
 //>
 //<alsa_init
 
-static size_t alsa_init() {
+static size_t alsa_init(unsigned int rate) {
   int err;
   const char *device = getenv("ALSA_DEFAULT");
   if (device == NULL) {
@@ -378,7 +370,7 @@ static size_t alsa_init() {
   }
   err = snd_output_stdio_attach(&Log, stderr, 0);
   assert(err >= 0);
-  chunk_bytes = alsa_configure();
+  chunk_bytes = alsa_configure(rate);
   return chunk_bytes;
 }
 
@@ -460,8 +452,8 @@ int Atcleci_Init(Tcl_Interp *interp) {
       eciLib, "eciSetOutputBuffer");
   _eciSetOutputDevice =
       (int (*)(void *, int))(unsigned long)dlsym(eciLib, "eciSetOutputDevice");
-
-  _voxGetVoices = (int (*)(vox_t *, unsigned int *))(unsigned long)dlsym(eciLib, "voxGetVoices");
+  _voxGetVoices = (int (*)(vox_t *, unsigned int *))(unsigned long)dlsym(
+      eciLib, "voxGetVoices");
   
   //>
   //< check for needed symbols
@@ -539,6 +531,9 @@ int Atcleci_Init(Tcl_Interp *interp) {
     okay = 0;
     Tcl_AppendResult(interp, "_eciGetAvailableLanguages undef\n", NULL);
   }
+  if (!_voxGetVoices) {
+    Tcl_AppendResult(interp, "Optional _voxGetVoices undef\n", NULL);
+  }
   if (!okay) {
     Tcl_AppendResult(interp, "Missing symbols from ", ECILIBRARYNAME, NULL);
     return TCL_ERROR;
@@ -551,31 +546,41 @@ int Atcleci_Init(Tcl_Interp *interp) {
     return TCL_ERROR;
   }
 
+  if (_voxGetVoices) {
+	  static vox_t voices[VOX_RESERVED_VOICES];
+	  static unsigned int number_of_voices = VOX_RESERVED_VOICES;
+	  number_of_voices = VOX_RESERVED_VOICES;
+	  if (!_voxGetVoices(voices, &number_of_voices) && (number_of_voices <= VOX_RESERVED_VOICES)) {
+		initVoices(voices, number_of_voices);
+	  }
+	}				   
+
   static enum ECILanguageDialect aLanguages[VOX_MAX_NB_OF_LANGUAGES];
-  int nLanguages = VOX_MAX_NB_OF_LANGUAGES;
+  int nLanguages = sizeof(aLanguages);
   _eciGetAvailableLanguages(aLanguages, &nLanguages);
 
-  number_of_voices = 0;
-  if (_voxGetVoices) {
-    number_of_voices = VOX_RESERVED_VOICES;
-    _voxGetVoices(voices, &number_of_voices);
-  }
-
-  uint32_t aDefaultLanguage =
-      initLanguage(interp, aLanguages, nLanguages, voices, number_of_voices);
+  enum ECILanguageDialect aDefaultLanguage =
+      initLanguage(interp, aLanguages, nLanguages);
   if (aDefaultLanguage == NODEFINEDCODESET) {
     Tcl_AppendResult(interp, "No language found", PACKAGENAME, NULL);
     return TCL_ERROR;
   }
   fprintf(stderr, "Found %d languages.\n", nLanguages);
-  eciHandle = _eciNewEx((enum ECILanguageDialect)aDefaultLanguage);
+  eciHandle = _eciNewEx(aDefaultLanguage);
   if (eciHandle == 0) {
     Tcl_AppendResult(interp, "Could not open text-to-speech engine", NULL);
     return TCL_ERROR;
   }
+  unsigned int rate = DEFAULT_SPEED;
+  {
+	voiceFeature_t v;
+	if (getVoiceFeature(interp, &v)) {
+	  rate = v.rate;
+	}
+  }
   //>
   //<initialize alsa
-  chunk_bytes = alsa_init();
+  chunk_bytes = alsa_init(rate);
   //<Finally, allocate waveBuffer
 
   fprintf(stderr, "allocating %d 16 bit samples, %f seconds of audio.\n",
@@ -747,18 +752,20 @@ int Say(ClientData eciHandle, Tcl_Interp *interp, int objc,
         return TCL_ERROR;
       }
     } else {
-		char *src = Tcl_GetStringFromObj(objv[i], NULL);
-		if (src) {
-			char *dest = convertFromUTF8(interp, src);
-			src = dest ? dest : src;			
-			rc = _eciAddText(eciHandle, src);
-			free(dest);
-			if (!rc) {
-				Tcl_SetResult(interp, const_cast<char *>("Internal tts error"),
-							  TCL_STATIC);
-				return TCL_ERROR;
-			}
-		}
+	  char *src = Tcl_GetStringFromObj(objv[i], NULL);
+      char *dest = convertFromUTF8(interp, src);
+      if (dest) {
+        rc = _eciAddText(eciHandle, dest);
+        free(dest);
+		dest = NULL;
+	  } else {
+        rc = _eciAddText(eciHandle, src);
+	  }
+	  if (!rc) {
+		Tcl_SetResult(interp, const_cast<char *>("Internal tts error"),
+					  TCL_STATIC);
+		return TCL_ERROR;
+	  }
     }
   }
   if (Tcl_StringMatch(Tcl_GetStringFromObj(objv[0], NULL), "synth")) {
@@ -866,11 +873,10 @@ int showAlsaState(ClientData eciHandle, Tcl_Interp *interp, int objc,
 
 int SetLanguage(ClientData eciHandle, Tcl_Interp *interp, int objc,
                 Tcl_Obj *CONST objv[]) {
-  const char *code = getAnnotation(interp);
-  if (code) {
-    char buffer[ANNOTATION_MAX_SIZE];
-    snprintf(buffer, ANNOTATION_MAX_SIZE, "`l%s", code);
-    _eciAddText(eciHandle, buffer);
+  voiceFeature_t v;
+  if (getVoiceFeature(interp, &v)) {
+	// TODO update speech rate (alsa)
+    _eciAddText(eciHandle, v.setLang);
   }
   return TCL_OK;
 }
